@@ -109,7 +109,15 @@ and vizAExpOp = ((place, aexp_op): aexp_op) =>
       ),
     )
   | Num(int) =>
-    Some(ConfigIR.mk(~place, ~name="num", ~nodes=[vizInt(int)], ~render=([int]) => int, ()))
+    Some(
+      ConfigIR.mk(
+        ~place,
+        ~name="num",
+        ~nodes=[vizInt(int)],
+        ~render=([int]) => Theia.noOp(int, []),
+        (),
+      ),
+    )
   | Add =>
     Some(
       ConfigIR.mk(

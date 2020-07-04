@@ -100,21 +100,13 @@ let make = (~continuity=true, ~padding=10., ~program) => {
            (n1 |> transform, f, n2 |> transform);
          });
     Js.log2("sifted", flowSiftedNodes |> Array.of_list);
-    Js.log2(
-      "layout",
-      flowSiftedNodes
-      |> List.map(((n1, f, n2)) =>
-           (Sidewinder.Config.layout((f, n1)), Sidewinder.Config.layout(([], n2)))
-         )
-      |> Array.of_list,
-    );
     let finalNode = flowSiftedNodes |> List.rev |> List.hd |> (((_, _, n)) => n);
     let finalState = Sidewinder.Config.compileTransition(finalNode, [], finalNode);
     let animatedNodes =
       List.mapi(
         (i, (n1, f, n2)) => {
-          Js.log(i);
-          Sidewinder.Config.compileTransition(~debug=true, n1, f, n2);
+          // Js.log(i);
+          Sidewinder.Config.compileTransition(~debug=false, n1, f, n2)
         },
         flowSiftedNodes,
       )
