@@ -93,17 +93,29 @@ let make = (~continuity=true, ~padding=10., ~program) => {
            let (keys, valueList) = List.split(f);
            let values = List.flatten(valueList);
            //  Js.log2("f before propagation", f |> Array.of_list);
-           let (f, n1) = ZEDViz.filterPlaces(keys, n1) |> Sidewinder.Config.propagatePlace(f);
+           let (f, n1) = ZEDViz.filterPlaces(keys, n1) |> Sidewinder.PropagatePlace.convert(f);
            //  Js.log2("f after propagation", f |> Array.of_list);
-           let (_, n2) = ZEDViz.filterPlaces(values, n2) |> Sidewinder.Config.propagatePlace(f);
+           let (_, n2) =
+             ZEDViz.filterPlaces(values, n2) |> Sidewinder.PropagatePlace.convert(f);
            (n1 |> transform, f, n2 |> transform);
          });
-    // Js.log2("sifted", flowSiftedNodes |> Array.of_list);
+    Js.log2("sifted", flowSiftedNodes |> Array.of_list);
+    Js.log2(
+      "layout",
+      flowSiftedNodes
+      |> List.map(((n1, f, n2)) =>
+           (Sidewinder.Config.layout((f, n1)), Sidewinder.Config.layout(([], n2)))
+         )
+      |> Array.of_list,
+    );
     let finalNode = flowSiftedNodes |> List.rev |> List.hd |> (((_, _, n)) => n);
     let finalState = Sidewinder.Config.compileTransition(finalNode, [], finalNode);
     let animatedNodes =
-      List.map(
-        ((n1, f, n2)) => Sidewinder.Config.compileTransition(n1, f, n2),
+      List.mapi(
+        (i, (n1, f, n2)) => {
+          Js.log(i);
+          Sidewinder.Config.compileTransition(~debug=true, n1, f, n2);
+        },
         flowSiftedNodes,
       )
       @ [finalState];
