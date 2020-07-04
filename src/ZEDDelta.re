@@ -946,6 +946,7 @@ let step = ((_, c): config): option((config, (string, Sidewinder.Flow.linear))) 
         [
           (v1_uid, [v3_uid]),
           (v2_uid, [v3_uid]),
+          /* TODO: op should also go to v3_uid? */
           (ctxts_uid, [ctxts_uid]),
           (env_uid, [env_uid]),
           (stack_uid, [stack_uid]),
@@ -970,10 +971,11 @@ let step = ((_, c): config): option((config, (string, Sidewinder.Flow.linear))) 
       env: (env_uid, _) as env,
       stack: (stack_uid, _) as stack,
     } =>
+    let (env2_uid, _) as env2 = envToUID(envFromUID(env)); /* use `from` and `to` to scrub all copied IDs */
     Some((
       mkConfig({
         zipper: mkZipper({focus: mkFocus(ZExp(e)), ctxts: mkCtxts(Empty)}),
-        env,
+        env: env2,
         stack: mkStack(Cons(mkFrame({ctxts, env}), stack)),
       }),
       (
@@ -981,11 +983,11 @@ let step = ((_, c): config): option((config, (string, Sidewinder.Flow.linear))) 
         [
           (e_uid, [e_uid]),
           (ctxts_uid, [ctxts_uid]),
-          (env_uid, [env_uid]),
+          (env_uid, [env_uid, env2_uid]),
           (stack_uid, [stack_uid]),
         ],
       ),
-    ))
+    ));
   /* lift */
   | {
       zipper: (
