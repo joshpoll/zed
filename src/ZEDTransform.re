@@ -114,12 +114,12 @@ let rec zipUp =
     | Some(c) =>
       let place =
         switch (f) {
-        | None => []
+        | None => {pat: None, extFns: []}
         | Some(f) =>
-          switch (f.place) {
-          | [] => []
+          switch (f.place.pat) {
+          | None => {pat: None, extFns: f.place.extFns}
           /* TODO: need to add into flow */
-          | [place, ..._] => [place ++ ".highlight"]
+          | Some(place) => {pat: Some(place ++ ".highlight"), extFns: f.place.extFns}
           }
         };
       let f =

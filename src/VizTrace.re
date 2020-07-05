@@ -89,8 +89,9 @@ let make = (~continuity=true, ~padding=10., ~program) => {
     let flowSiftedNodes =
       Sidewinder.Fn.mapPairs((n1, n2) => (n1, n2), nodes)
       |> List.combine(flows)
-      |> List.map(((f, (n1, n2))) => {
-           let (keys, valueList) = List.split(f);
+      |> List.map(((Sidewinder.Flow.{pattern, extFn} as f, (n1, n2))) => {
+           let kvs = pattern @ extFn;
+           let (keys, valueList) = List.split(kvs);
            let values = List.flatten(valueList);
            //  Js.log2("f before propagation", f |> Array.of_list);
            let (f, n1) =
@@ -106,7 +107,8 @@ let make = (~continuity=true, ~padding=10., ~program) => {
          });
     Js.log2("sifted", flowSiftedNodes |> Array.of_list);
     let finalNode = flowSiftedNodes |> List.rev |> List.hd |> (((_, _, n)) => n);
-    let finalState = Sidewinder.Config.compileTransition(finalNode, [], finalNode);
+    let finalState =
+      Sidewinder.Config.compileTransition(finalNode, Sidewinder.Flow.none, finalNode);
     let animatedNodes =
       List.mapi(
         (i, (n1, f, n2)) => {
@@ -214,7 +216,7 @@ let make = (~continuity=true, ~padding=10., ~program) => {
       nodes
       |> List.map(PlainZEDViz.vizConfig)
       |> List.map(Sidewinder.ToConfigGraph.lower)
-      |> List.map(Sidewinder.PropagatePlace.convert([]))
+      |> List.map(Sidewinder.PropagatePlace.convert(Sidewinder.Flow.none))
       |> List.map(((_, n)) => n)
       |> List.map(transform);
     /* let cap = 15;
@@ -224,9 +226,13 @@ let make = (~continuity=true, ~padding=10., ~program) => {
     // Js.log2("nodes", nodes |> Array.of_list);
     // Js.log2("sifted", flowSiftedNodes |> Array.of_list);
     let finalNode = nodes |> List.rev |> List.hd;
-    let finalState = Sidewinder.Config.compileTransition(finalNode, [], finalNode);
+    let finalState =
+      Sidewinder.Config.compileTransition(finalNode, Sidewinder.Flow.none, finalNode);
     let animatedNodes =
-      Bobcat.Fn.mapPairs((n1, n2) => Sidewinder.Config.compileTransition(n1, [], n2), nodes)
+      Bobcat.Fn.mapPairs(
+        (n1, n2) => Sidewinder.Config.compileTransition(n1, Sidewinder.Flow.none, n2),
+        nodes,
+      )
       @ [finalState];
     /*  let flowNodePairs =
           trace |> List.map((((rule, flow), n)) => (flow, ZEDViz.vizState(rule, n)));
