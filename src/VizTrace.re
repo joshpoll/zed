@@ -93,10 +93,15 @@ let make = (~continuity=true, ~padding=10., ~program) => {
            let (keys, valueList) = List.split(f);
            let values = List.flatten(valueList);
            //  Js.log2("f before propagation", f |> Array.of_list);
-           let (f, n1) = ZEDViz.filterPlaces(keys, n1) |> Sidewinder.PropagatePlace.convert(f);
+           let (f, n1) =
+             ZEDViz.filterPlaces(keys, n1)
+             |> Sidewinder.ToConfigGraph.lower
+             |> Sidewinder.PropagatePlace.convert(f);
            //  Js.log2("f after propagation", f |> Array.of_list);
            let (_, n2) =
-             ZEDViz.filterPlaces(values, n2) |> Sidewinder.PropagatePlace.convert(f);
+             ZEDViz.filterPlaces(values, n2)
+             |> Sidewinder.ToConfigGraph.lower
+             |> Sidewinder.PropagatePlace.convert(f);
            (n1 |> transform, f, n2 |> transform);
          });
     Js.log2("sifted", flowSiftedNodes |> Array.of_list);
@@ -205,7 +210,13 @@ let make = (~continuity=true, ~padding=10., ~program) => {
           })
        |> List.split
        |> (((flows, ns)) => Sidewinder.Config.compile(flows, ns)); */
-    let nodes = nodes |> List.map(PlainZEDViz.vizConfig) |> List.map(transform);
+    let nodes: list(Sidewinder.ConfigGraphIR.node) =
+      nodes
+      |> List.map(PlainZEDViz.vizConfig)
+      |> List.map(Sidewinder.ToConfigGraph.lower)
+      |> List.map(Sidewinder.PropagatePlace.convert([]))
+      |> List.map(((_, n)) => n)
+      |> List.map(transform);
     /* let cap = 15;
 
        let nodes = nodes->Belt.List.take(cap + 1)->Belt.Option.getExn;
