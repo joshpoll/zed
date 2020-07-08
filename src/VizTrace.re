@@ -106,7 +106,11 @@ let make = (~continuity=true, ~padding=10., ~program) => {
            (n1 |> transform, f, n2 |> transform);
          });
     Js.log2("sifted", flowSiftedNodes |> Array.of_list);
-    let finalNode = flowSiftedNodes |> List.rev |> List.hd |> (((_, _, n)) => n);
+    let (_, finalNode) =
+      List.hd(List.rev(nodes))
+      |> ZEDViz.filterPlaces([])
+      |> Sidewinder.ToConfigGraph.lower
+      |> Sidewinder.PropagatePlace.convert(Sidewinder.Flow.none);
     let finalState =
       Sidewinder.Config.compileTransition(finalNode, Sidewinder.Flow.none, finalNode);
     let animatedNodes =
