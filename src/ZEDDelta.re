@@ -949,7 +949,7 @@ let step = ((_, c): config): option((config, (string, Sidewinder.Flow.linearExt)
             ZPreVal((
               _,
               {
-                op: (_, AExp((_, Add))),
+                op: (_, AExp((op_uid, Add))),
                 values: (
                   _,
                   Cons(
@@ -977,14 +977,12 @@ let step = ((_, c): config): option((config, (string, Sidewinder.Flow.linearExt)
         "add",
         {
           pattern: [
-            (v1_uid, [v3_uid]),
-            (v2_uid, [v3_uid]),
-            /* TODO: op should also go to v3_uid? */
             (ctxts_uid, [ctxts_uid]),
             (env_uid, [env_uid]),
             (stack_uid, [stack_uid]),
           ],
-          extFn: [],
+          /* TODO: op transition doesn't work b/c it also renders the () () pieces */
+          extFn: [(v1_uid, [v3_uid]), /* (op_uid, [v3_uid]), */ (v2_uid, [v3_uid])],
         },
       ),
     ));
