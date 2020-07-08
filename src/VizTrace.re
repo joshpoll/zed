@@ -108,13 +108,7 @@ let make = (~continuity=true, ~padding=10., ~program) => {
            (n1 |> transform, f, n2 |> transform);
          });
     // Js.log2("sifted", flowSiftedNodes |> Array.of_list);
-    let (_, finalNode) =
-      List.hd(List.rev(nodes))
-      |> Sidewinder.Config.filterPlaces([])
-      |> Sidewinder.ToConfigGraph.lower
-      |> Sidewinder.PropagatePlace.convert(Sidewinder.Flow.none);
-    let finalState =
-      Sidewinder.Config.compileTransition(finalNode, Sidewinder.Flow.none, finalNode);
+    let finalState = Sidewinder.Config.liftToCompiledTransition(List.hd(List.rev(nodes)));
     let animatedNodes =
       List.mapi(
         (i, (n1, f, n2)) => {
