@@ -2,6 +2,7 @@ let leftButtonStyle = ReactDOMRe.Style.make(~borderRadius="4px 0px 0px 4px", ~wi
 let rightButtonStyle = ReactDOMRe.Style.make(~borderRadius="0px 4px 4px 0px", ~width="48px", ());
 
 type state = {
+  animatedNodes: list(React.element),
   pos: int,
   length: int,
 };
@@ -11,9 +12,10 @@ type action =
   | Decrement
   | SetPos(int)
   | Length(int)
+  | SetNodes(list(React.element))
   | Error;
 
-let initialState = {pos: 0, length: 1};
+let initialState = {animatedNodes: [<g> {React.string("Loading...")} </g>], pos: 0, length: 1};
 
 let reducer = (state, action) => {
   switch (action) {
@@ -21,6 +23,7 @@ let reducer = (state, action) => {
   | Decrement => {...state, pos: max(0, state.pos - 1)}
   | SetPos(n) => {...state, pos: min(state.length - 1, max(0, n))}
   | Length(length) => {...state, length}
+  | SetNodes(animatedNodes) => {...state, animatedNodes}
   | Error => state
   };
 };
@@ -48,7 +51,6 @@ let make = (~continuity=true, ~padding=10., ~program) => {
   if (continuity) {
     let (rules, nodes) = ZEDDelta.interpretTrace(liftedProgram);
     let (ruleNames, flows) = List.split(rules);
-    // Js.log2("ruleNames", ruleNames |> Array.of_list);
 
     let (state, dispatch) = React.useReducer(reducer, initialState);
     let (Animation.{curr, next}, setAnimationState) = React.useState(() => Animation.initValue);
@@ -57,6 +59,41 @@ let make = (~continuity=true, ~padding=10., ~program) => {
     // reasonml.github.io/reason-react/docs/en/components#hooks for more info
     React.useEffect0(() => {
       dispatch(Length(List.length(nodes)));
+
+      let nodes = nodes |> List.map(ZEDViz.vizConfig);
+      let flowSiftedNodes =
+        Sidewinder.Fn.mapPairs((n1, n2) => (n1, n2), nodes)
+        |> List.combine(flows)
+        |> List.map(((Sidewinder.Flow.{pattern, extFn} as f, (n1, n2))) => {
+             let kvs = pattern @ extFn;
+             let (keys, valueList) = List.split(kvs);
+             let values = List.flatten(valueList);
+             //  Js.log2("f before propagation", f |> Array.of_list);
+             let (f, n1) =
+               Sidewinder.Config.filterPlaces(keys, n1)
+               |> Sidewinder.ToConfigGraph.lower
+               |> Sidewinder.PropagatePlace.convert(f);
+             //  Js.log2("f after propagation", f |> Array.of_list);
+             let (_, n2) =
+               Sidewinder.Config.filterPlaces(values, n2)
+               |> Sidewinder.ToConfigGraph.lower
+               |> Sidewinder.PropagatePlace.convert(f);
+             (n1 |> transform, f, n2 |> transform);
+           });
+      // Js.log2("sifted", flowSiftedNodes |> Array.of_list);
+      let finalState = Sidewinder.Config.liftToCompiledTransition(List.hd(List.rev(nodes)));
+      dispatch(
+        SetNodes(
+          List.mapi(
+            (i, (n1, f, n2)) => {
+              // Js.log(i);
+              Sidewinder.Config.compileTransition(~debug=false, n1, f, n2)
+            },
+            flowSiftedNodes,
+          )
+          @ [finalState],
+        ),
+      );
 
       // Returning None, instead of Some(() => ...), means we don't have any
       // cleanup to do before unmounting. That's not 100% true. We should
@@ -67,61 +104,7 @@ let make = (~continuity=true, ~padding=10., ~program) => {
       // with a cancellation API
       None;
     });
-
-    /* let swTrace =
-       trace
-       |> List.map((((rule, flow), c)) => {
-            let (flow, n) = ZEDViz.vizState(rule, c) |> Sidewinder.Config.propagatePlace(flow);
-            (
-              flow,
-              n
-              |> ZEDTransform.transformOp
-              |> ZEDTransform.transformZipper
-              |> ZEDTransform.transformContinuation,
-            );
-          })
-       |> List.split
-       |> (((flows, ns)) => Sidewinder.Config.compile(flows, ns)); */
-    let nodes = nodes |> List.map(ZEDViz.vizConfig);
-    /* let cap = 15;
-
-       let nodes = nodes->Belt.List.take(cap + 1)->Belt.Option.getExn;
-       let flows = flows->Belt.List.take(cap)->Belt.Option.getExn; */
-    // Js.log2("nodes", nodes |> Array.of_list);
-    let flowSiftedNodes =
-      Sidewinder.Fn.mapPairs((n1, n2) => (n1, n2), nodes)
-      |> List.combine(flows)
-      |> List.map(((Sidewinder.Flow.{pattern, extFn} as f, (n1, n2))) => {
-           let kvs = pattern @ extFn;
-           let (keys, valueList) = List.split(kvs);
-           let values = List.flatten(valueList);
-           //  Js.log2("f before propagation", f |> Array.of_list);
-           let (f, n1) =
-             Sidewinder.Config.filterPlaces(keys, n1)
-             |> Sidewinder.ToConfigGraph.lower
-             |> Sidewinder.PropagatePlace.convert(f);
-           //  Js.log2("f after propagation", f |> Array.of_list);
-           let (_, n2) =
-             Sidewinder.Config.filterPlaces(values, n2)
-             |> Sidewinder.ToConfigGraph.lower
-             |> Sidewinder.PropagatePlace.convert(f);
-           (n1 |> transform, f, n2 |> transform);
-         });
-    // Js.log2("sifted", flowSiftedNodes |> Array.of_list);
-    let finalState = Sidewinder.Config.liftToCompiledTransition(List.hd(List.rev(nodes)));
-    let animatedNodes =
-      List.mapi(
-        (i, (n1, f, n2)) => {
-          // Js.log(i);
-          Sidewinder.Config.compileTransition(~debug=false, n1, f, n2)
-        },
-        flowSiftedNodes,
-      )
-      @ [finalState];
-    /*  let flowNodePairs =
-          trace |> List.map((((rule, flow), n)) => (flow, ZEDViz.vizState(rule, n)));
-        let transitionViz = Sidewinder.Fn.mapPairs(((f1, n1), (f2, n2)) => {}, flowNodePairs); */
-    let renderedConfig = List.nth(animatedNodes, state.pos);
+    let renderedConfig = List.nth(state.animatedNodes, state.pos);
     let width = 1000.;
     let height = 300.;
     let xOffset = 0.;
