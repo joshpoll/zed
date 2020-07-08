@@ -9,6 +9,7 @@ type state = {
 type action =
   | Increment
   | Decrement
+  | SetPos(int)
   | Length(int)
   | Error;
 
@@ -18,6 +19,7 @@ let reducer = (state, action) => {
   switch (action) {
   | Increment => {...state, pos: min(state.length - 1, state.pos + 1)}
   | Decrement => {...state, pos: max(0, state.pos - 1)}
+  | SetPos(n) => {...state, pos: min(state.length - 1, max(0, n))}
   | Length(length) => {...state, length}
   | Error => state
   };
@@ -105,7 +107,7 @@ let make = (~continuity=true, ~padding=10., ~program) => {
              |> Sidewinder.PropagatePlace.convert(f);
            (n1 |> transform, f, n2 |> transform);
          });
-    Js.log2("sifted", flowSiftedNodes |> Array.of_list);
+    // Js.log2("sifted", flowSiftedNodes |> Array.of_list);
     let (_, finalNode) =
       List.hd(List.rev(nodes))
       |> ZEDViz.filterPlaces([])
@@ -139,26 +141,41 @@ let make = (~continuity=true, ~padding=10., ~program) => {
        let yOffset = /* renderedConfig.transform.translate.y +. */
        renderedConfig.bbox->Sidewinder.Rectangle.y1; */
     <div>
-      <div> {React.string("state: ")} {React.string(string_of_int(state.pos))} </div>
+      <div> {React.string("transition: ")} {React.string(string_of_int(state.pos))} </div>
+      <input
+        type_="range"
+        min="0"
+        max={Js.Int.toString(state.length - 1)}
+        value={Js.Int.toString(state.pos)}
+        step=1.0
+        onChange={key_event => {
+          let newinput = key_event->ReactEvent.Form.target##value;
+          dispatch(SetPos(int_of_string(newinput)));
+          setAnimationState(_ => Animation.initValue);
+        }}
+      />
+      <br />
       <button
         style=leftButtonStyle
         onClick={_event => {
           dispatch(Decrement);
-          setAnimationState(_ => Animation.initValue);
+          // setAnimationState(_ => Animation.initValue);
+          setAnimationState(_ => {curr: After, next: Before});
         }}>
         {React.string("<-")}
       </button>
-      <button onClick={_event => setAnimationState(toggle)}>
-        {switch (curr) {
-         | Before => React.string("To After")
-         | After => React.string("To Before")
-         }}
-      </button>
+      /* <button onClick={_event => setAnimationState(toggle)}>
+           {switch (curr) {
+            | Before => React.string("To After")
+            | After => React.string("To Before")
+            }}
+         </button> */
       <button
         style=rightButtonStyle
         onClick={_event => {
           dispatch(Increment);
-          setAnimationState(_ => Animation.initValue);
+          // setAnimationState(_ => Animation.initValue);
+          setAnimationState(_ => {curr: Before, next: After});
         }}>
         {React.string("->")}
       </button>
