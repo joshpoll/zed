@@ -97,12 +97,12 @@ let make = (~continuity=true, ~padding=10., ~program) => {
            let values = List.flatten(valueList);
            //  Js.log2("f before propagation", f |> Array.of_list);
            let (f, n1) =
-             ZEDViz.filterPlaces(keys, n1)
+             Sidewinder.Config.filterPlaces(keys, n1)
              |> Sidewinder.ToConfigGraph.lower
              |> Sidewinder.PropagatePlace.convert(f);
            //  Js.log2("f after propagation", f |> Array.of_list);
            let (_, n2) =
-             ZEDViz.filterPlaces(values, n2)
+             Sidewinder.Config.filterPlaces(values, n2)
              |> Sidewinder.ToConfigGraph.lower
              |> Sidewinder.PropagatePlace.convert(f);
            (n1 |> transform, f, n2 |> transform);
@@ -110,7 +110,7 @@ let make = (~continuity=true, ~padding=10., ~program) => {
     // Js.log2("sifted", flowSiftedNodes |> Array.of_list);
     let (_, finalNode) =
       List.hd(List.rev(nodes))
-      |> ZEDViz.filterPlaces([])
+      |> Sidewinder.Config.filterPlaces([])
       |> Sidewinder.ToConfigGraph.lower
       |> Sidewinder.PropagatePlace.convert(Sidewinder.Flow.none);
     let finalState =
